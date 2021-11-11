@@ -1,0 +1,154 @@
+import datetime
+import time
+import re
+
+# url 
+def insta_searching(word): 
+        url = 'https://www.instagram.com/explore/tags/'+word
+        return url
+
+def select_first(driver):
+        first = driver.find_element_by_css_selector('div._9AhH0')
+        first.click()
+        time.sleep(3) # 3 sec for loading
+
+
+# Data Part
+def get_content(driver):
+        # content
+        html = driver.page_source
+        soup = BeautifulSoup(html, 'html.parser', from_encoding='utf-8')
+ 
+        try: 
+                content = soup.select('div.C4VMK > span')[0].text
+        except:
+                content = ' '
+        tags = re.findall(r'#[^\s#,\\]+', content)
+
+        # data_date
+        try:
+                date = soup.select('time._1o9PC.Nzb55')[0]['datetime'][:10]
+        except:
+                date = ''
+        # data_like
+        try:
+                like = soup.select('body > div._2dDPU.CkGkG > div.zZYga > div > article > div.eo2As > section.EDfFK.ygqzn > div > div > a')[0].text[4:-1]
+        except:
+                like = 0
+        # data_location
+        try:
+                place = soup.select('react-root > section > main > div > div.ltEKP > article > header > div.o-MQd.z8cbW > div.M30cS > div.JF9hh > a')[0].text
+        except:
+                place = ''
+        # data_id
+        try:
+                post_id = soup.select_one('body > div._2dDPU.CkGkG > div.zZYga > div > article > header > div.o-MQd.z8cbW > div.PQo_0.RqtMr > div.e1e1d > span > a').string
+        except:
+                post_id = ''
+        # data_Save
+        data = [post_id, content, date, like, place, tags]
+        return data
+
+# moving_on
+def move_next(driver):
+        right = driver.find_element_by_css_selector('a._65Bje.coreSpriteRightPaginationArrow')
+        right.click()
+        time.sleep(3)
+
+from selenium import webdriver
+from bs4 import BeautifulSoup
+import time
+import re
+import pandas as pd
+import openpyxl
+
+# 1. Install Driver
+driver = webdriver.Chrome('./chromedriver.exe')
+word = '' # Keyword
+target =  # Number
+fileName = '.xlsx' # Saved_Name
+url = insta_searching(word)
+driver.get(url)
+time.sleep(3)
+
+# 2. ID/PW
+
+driver.find_element_by_xpath('//*[@id="react-root"]/section/nav/div[2]/div/div/div[3]/div/span/a[1]/button').click()
+time.sleep(4)
+
+email = '' # Input_ID
+input_id = driver.find_elements_by_css_selector('input._2hvTZ.pexuQ.zyHYP')[0]
+input_id.clear()
+input_id.send_keys(email)
+
+
+password = '' # Input_PW
+input_pw = driver.find_elements_by_css_selector('input._2hvTZ.pexuQ.zyHYP')[1]
+input_pw.clear()
+input_pw.send_keys(password)
+input_pw.submit()
+
+time.sleep(5)
+
+# Login
+
+try:
+    log_info_button = driver.find_element_by_xpath('//*[@id="react-root"]/section/main/div/div/div/section/div/button')
+    log_info_button.click()
+except:
+    pass
+   
+time.sleep(5)
+
+# Alarm Stage
+try:
+    alarm_remove_button = driver.find_element_by_xpath('/html/body/div[4]/div/div/div/div[3]/button[1]')
+    alarm_remove_button.click()
+except:
+    pass
+   
+time.sleep(5)
+
+# 3. Search Page
+driver.get(url)
+time.sleep(4)
+# 4. First Post
+select_first(driver)
+# 5. Empty Variable; result
+results = []
+
+# 6. Crawling
+'''
+for i in range(target):
+        data = get_content(driver)
+        try:
+                if data[5] in results:
+                        move_next(driver)
+                        print('Overlapping')
+                        i -= 1
+                else:
+                        results.append(data)
+                        print(str(i+1)+'/'+str(target))
+        except:
+                break
+
+'''
+for i in range(target):
+        data = get_content(driver)
+        results.append(data)
+        print(str(i+1)+'/'+str(target))
+        time.sleep(1)
+        try:
+                move_next(driver)
+                
+        except:
+                continue
+
+df = pd.DataFrame(results, columns = ["post_id", "content", "date", "like", "place", "tags"])
+df.to_excel(fileName)
+
+
+## Finish
+driver.close()
+                
+
